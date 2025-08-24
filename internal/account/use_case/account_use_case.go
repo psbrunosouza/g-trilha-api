@@ -1,0 +1,28 @@
+package usecase
+
+import (
+	"trilha-api/internal/account/repository"
+	db "trilha-api/internal/shared/database/sqlc"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
+type AccountUseCase struct {
+	repo repository.AccountRepositoryInterface
+}
+
+func New(repo repository.AccountRepositoryInterface) *AccountUseCase {
+	return &AccountUseCase{repo: repo}
+}
+
+func (uc *AccountUseCase) Register(account *db.Account) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(account.Password), bcrypt.DefaultCost)
+
+	if err != nil {
+		return err
+	}
+
+	account.Password = string(hashedPassword)
+
+	return uc.repo.Register(account)
+}
