@@ -7,14 +7,14 @@ import (
 )
 
 type AccountRepository struct {
-	db *db.Queries
+	db db.Querier
 }
 
 type AccountRepositoryInterface interface {
 	Register(account *db.Account) error
 }
 
-func New(db *db.Queries) *AccountRepository {
+func New(db db.Querier) *AccountRepository {
 	return &AccountRepository{db: db}
 }
 
