@@ -26,3 +26,5 @@ func NewAccountHandler(db2 *db.Queries) *handler.AccountHandler {
 // account_wire.go:
 
 var set_account_repository_dependency = wire.NewSet(repository.New, wire.Bind(new(repository.AccountRepositoryInterface), new(*repository.AccountRepository)))
+
+var set_account_usecase_dependency = wire.NewSet(usecase.New, wire.Bind(new(usecase.AccountUseCaseInterface), new(*usecase.AccountUseCase)))

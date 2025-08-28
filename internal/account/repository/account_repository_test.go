@@ -58,9 +58,9 @@ func TestAccountRepository_Register(t *testing.T) {
 		err := repo.Register(account)
 
 		// Assert (Verificação)
-		assert.NoError(t, err) // Verificamos que não houve erro
+		assert.NoError(t, err)                          // Verificamos que não houve erro
 		assert.Equal(t, expectedAccount.ID, account.ID) // Verificamos que o ID foi atualizado
-		dbMock.AssertExpectations(t) // Verificamos se o mock foi chamado como esperado
+		dbMock.AssertExpectations(t)                    // Verificamos se o mock foi chamado como esperado
 	})
 
 	// Cenário 2: Erro no registro
@@ -88,7 +88,7 @@ func TestAccountRepository_Register(t *testing.T) {
 		err := repo.Register(account)
 
 		// Assert (Verificação)
-		assert.Error(t, err) // Verificamos que um erro foi retornado
+		assert.Error(t, err)         // Verificamos que um erro foi retornado
 		dbMock.AssertExpectations(t) // Verificamos se o mock foi chamado como esperado
 	})
 }

@@ -7,6 +7,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type AccountUseCaseInterface interface {
+	Register(account *db.Account) error
+}
+
 type AccountUseCase struct {
 	repo repository.AccountRepositoryInterface
 }

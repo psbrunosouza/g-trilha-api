@@ -11,10 +11,10 @@ import (
 )
 
 type AccountHandler struct {
-	usecase *usecase.AccountUseCase
+	usecase usecase.AccountUseCaseInterface
 }
 
-func New(uc *usecase.AccountUseCase) *AccountHandler {
+func New(uc usecase.AccountUseCaseInterface) *AccountHandler {
 	return &AccountHandler{usecase: uc}
 }
 

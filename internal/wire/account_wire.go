@@ -7,7 +7,7 @@ import (
 	"trilha-api/internal/account/handler"
 	"trilha-api/internal/account/repository"
 	usecase "trilha-api/internal/account/use_case"
-	db "trilha-api/internal/shared/database/sqlc"
+	sqlc "trilha-api/internal/shared/database/sqlc"
 
 	w "github.com/google/wire"
 )
@@ -17,7 +17,17 @@ var set_account_repository_dependency = w.NewSet(
 	w.Bind(new(repository.AccountRepositoryInterface), new(*repository.AccountRepository)),
 )
 
-func NewAccountHandler(db *db.Queries) *handler.AccountHandler {
-	w.Build(set_account_repository_dependency, usecase.New, handler.New)
+var set_account_usecase_dependency = w.NewSet(
+	usecase.New,
+	w.Bind(new(usecase.AccountUseCaseInterface), new(*usecase.AccountUseCase)),
+)
+
+func NewAccountHandler(db *sqlc.Queries) *handler.AccountHandler {
+	w.Build(
+		w.Bind(new(sqlc.Querier), new(*sqlc.Queries)),
+		set_account_repository_dependency, 
+		set_account_usecase_dependency, 
+		handler.New,
+	)
 	return &handler.AccountHandler{}
 }
