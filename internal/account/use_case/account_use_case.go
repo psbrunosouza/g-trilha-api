@@ -1,14 +1,14 @@
 package usecase
 
 import (
+	"trilha-api/internal/account/entity"
 	"trilha-api/internal/account/repository"
-	db "trilha-api/internal/shared/database/sqlc"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AccountUseCaseInterface interface {
-	Register(account *db.Account) error
+	Register(account *entity.AccountEntity) error
 }
 
 type AccountUseCase struct {
@@ -19,7 +19,7 @@ func New(repo repository.AccountRepositoryInterface) *AccountUseCase {
 	return &AccountUseCase{repo: repo}
 }
 
-func (uc *AccountUseCase) Register(account *db.Account) error {
+func (uc *AccountUseCase) Register(account *entity.AccountEntity) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(account.Password), bcrypt.DefaultCost)
 
 	if err != nil {

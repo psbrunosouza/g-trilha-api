@@ -25,8 +25,8 @@ var set_account_usecase_dependency = w.NewSet(
 func NewAccountHandler(db *sqlc.Queries) *handler.AccountHandler {
 	w.Build(
 		w.Bind(new(sqlc.Querier), new(*sqlc.Queries)),
-		set_account_repository_dependency, 
-		set_account_usecase_dependency, 
+		set_account_repository_dependency,
+		set_account_usecase_dependency,
 		handler.New,
 	)
 	return &handler.AccountHandler{}

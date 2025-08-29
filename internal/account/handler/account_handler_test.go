@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 	"trilha-api/internal/account/dto"
+	"trilha-api/internal/account/entity"
 	"trilha-api/internal/account/handler"
 	usecase "trilha-api/internal/account/use_case"
-	db "trilha-api/internal/shared/database/sqlc"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -20,11 +20,11 @@ import (
 // mockAccountUseCase é o nosso mock para a interface AccountUseCaseInterface.
 // Ele nos permite simular o comportamento do use case em nossos testes.
 type mockAccountUseCase struct {
-	RegisterFunc func(account *db.Account) error
+	RegisterFunc func(account *entity.AccountEntity) error
 }
 
 // Register é a implementação mockada do método da interface.
-func (m *mockAccountUseCase) Register(account *db.Account) error {
+func (m *mockAccountUseCase) Register(account *entity.AccountEntity) error {
 	if m.RegisterFunc != nil {
 		return m.RegisterFunc(account)
 	}
@@ -45,7 +45,7 @@ func TestAccountHandler_Register(t *testing.T) {
 		accountID := uuid.New()
 
 		// Configuramos o mock para retornar sucesso
-		mockUseCase.RegisterFunc = func(account *db.Account) error {
+		mockUseCase.RegisterFunc = func(account *entity.AccountEntity) error {
 			// Simulamos que o use case preenche o ID do modelo
 			account.ID = accountID
 			return nil
@@ -60,6 +60,7 @@ func TestAccountHandler_Register(t *testing.T) {
 			Name:     "Test User",
 			Email:    "test@example.com",
 			Password: "password123",
+			Avatar:   "test",
 		}
 		body, _ := json.Marshal(createAccountReq)
 
@@ -111,7 +112,7 @@ func TestAccountHandler_Register(t *testing.T) {
 		expectedError := "database connection failed"
 
 		// Configuramos o mock para retornar um erro
-		mockUseCase.RegisterFunc = func(account *db.Account) error {
+		mockUseCase.RegisterFunc = func(account *entity.AccountEntity) error {
 			return errors.New(expectedError)
 		}
 
@@ -123,6 +124,7 @@ func TestAccountHandler_Register(t *testing.T) {
 			Name:     "Test User",
 			Email:    "test@example.com",
 			Password: "password123",
+			Avatar:   "test",
 		}
 		body, _ := json.Marshal(createAccountReq)
 

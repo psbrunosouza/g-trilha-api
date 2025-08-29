@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -31,6 +32,35 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 		arg.Password,
 		arg.Avatar,
 	)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Password,
+		&i.Avatar,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const updateAccount = `-- name: UpdateAccount :one
+UPDATE accounts
+SET name = $2, avatar = $3
+WHERE id = $1
+RETURNING id, name, email, password, avatar, created_at, updated_at, deleted_at
+`
+
+type UpdateAccountParams struct {
+	ID     uuid.UUID
+	Name   string
+	Avatar pgtype.Text
+}
+
+func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error) {
+	row := q.db.QueryRow(ctx, updateAccount, arg.ID, arg.Name, arg.Avatar)
 	var i Account
 	err := row.Scan(
 		&i.ID,

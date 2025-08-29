@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 	"trilha-api/internal/account/dto"
+	"trilha-api/internal/account/entity"
 	usecase "trilha-api/internal/account/use_case"
-	db "trilha-api/internal/shared/database/sqlc"
 	sharedDto "trilha-api/internal/shared/dto"
 
 	"github.com/gin-gonic/gin"
@@ -26,10 +26,11 @@ func (h *AccountHandler) Register(c *gin.Context) {
 		return
 	}
 
-	model := db.Account{
+	model := entity.AccountEntity{
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password,
+		Avatar:   req.Avatar,
 	}
 
 	if err := h.usecase.Register(&model); err != nil {
@@ -40,12 +41,15 @@ func (h *AccountHandler) Register(c *gin.Context) {
 	res := dto.AccountResponse{
 		Default: sharedDto.Default{
 			ID:        model.ID,
-			CreatedAt: model.CreatedAt.Time,
-			UpdatedAt: model.UpdatedAt.Time,
-			DeletedAt: model.DeletedAt.Time,
+			CreatedAt: model.CreatedAt,
+			UpdatedAt: model.UpdatedAt,
 		},
 		Name:  model.Name,
 		Email: model.Email,
+	}
+
+	if model.DeletedAt != nil {
+		res.DeletedAt = *model.DeletedAt
 	}
 
 	c.JSON(http.StatusCreated, sharedDto.APIResponse[dto.AccountResponse]{

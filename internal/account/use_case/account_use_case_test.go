@@ -2,18 +2,18 @@ package usecase_test
 
 import (
 	"testing"
-	"trilha-api/internal/account/use_case"
-	db "trilha-api/internal/shared/database/sqlc"
+	"trilha-api/internal/account/entity"
+	usecase "trilha-api/internal/account/use_case"
 
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type mockAccountRepository struct {
-	RegisterFunc func(account *db.Account) error
+	RegisterFunc func(account *entity.AccountEntity) error
 }
 
-func (m *mockAccountRepository) Register(account *db.Account) error {
+func (m *mockAccountRepository) Register(account *entity.AccountEntity) error {
 	return m.RegisterFunc(account)
 }
 
@@ -21,13 +21,14 @@ func TestAccountUseCase_Register(t *testing.T) {
 	mockRepo := &mockAccountRepository{}
 	uc := usecase.New(mockRepo)
 
-	account := &db.Account{
+	account := &entity.AccountEntity{
 		Name:     "Test User",
 		Email:    "test@example.com",
 		Password: "password123",
+		Avatar:   "test image",
 	}
 
-	mockRepo.RegisterFunc = func(acc *db.Account) error {
+	mockRepo.RegisterFunc = func(acc *entity.AccountEntity) error {
 		assert.NotEqual(t, "password123", acc.Password)
 		err := bcrypt.CompareHashAndPassword([]byte(acc.Password), []byte("password123"))
 		assert.NoError(t, err)

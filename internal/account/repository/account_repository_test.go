@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"trilha-api/internal/account/entity"
 	db "trilha-api/internal/shared/database/sqlc"
+	"trilha-api/internal/shared/utils"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -32,16 +34,18 @@ func TestAccountRepository_Register(t *testing.T) {
 		dbMock := new(DBMock)
 		repo := New(dbMock)
 
-		account := &db.Account{
+		account := &entity.AccountEntity{
 			Name:     "Test User",
 			Email:    "test@example.com",
 			Password: "password",
+			Avatar:   "test image",
 		}
 
 		createAccountParams := db.CreateAccountParams{
 			Name:     account.Name,
 			Email:    account.Email,
 			Password: account.Password,
+			Avatar:   utils.ToPgText(account.Avatar),
 		}
 
 		expectedAccount := db.Account{
@@ -69,16 +73,18 @@ func TestAccountRepository_Register(t *testing.T) {
 		dbMock := new(DBMock)
 		repo := New(dbMock)
 
-		account := &db.Account{
+		account := &entity.AccountEntity{
 			Name:     "Test User",
 			Email:    "test@example.com",
 			Password: "password",
+			Avatar:   "test image",
 		}
 
 		createAccountParams := db.CreateAccountParams{
 			Name:     account.Name,
 			Email:    account.Email,
 			Password: account.Password,
+			Avatar:   utils.ToPgText(account.Avatar),
 		}
 
 		// Configuramos o mock para retornar um erro
