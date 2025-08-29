@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres
+    container_name: trilha-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  migrate:
+    image: migrate/migrate:v4.18.3
+    container_name: trilha-migrate
+    depends_on:
+      - postgres
+    command: >
+      -path=/migrations -database=postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable up
+    volumes:
+      - ./db/migrations:/migrations
+
+  api:
+    build: .
+    container_name: trilha-api
+    restart: always
+    depends_on:
+      - migrate
+    ports:
+      - "8081:8080"
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - ./db:/app/db
+      - ./configs:/app/configs
+
+volumes:
+  postgres_data:
