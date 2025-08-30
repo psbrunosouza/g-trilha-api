@@ -2,9 +2,11 @@ package usecase_test
 
 import (
 	"testing"
+	"time"
 	"trilha-api/internal/account/entity"
 	usecase "trilha-api/internal/account/use_case"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -41,6 +43,31 @@ func TestAccountUseCase_Register(t *testing.T) {
 	}
 
 	err := uc.Register(account)
+
+	assert.NoError(t, err)
+}
+
+func TestAccountUseCase_Find(t *testing.T) {
+	mockRepo := &mockAccountRepository{}
+	uc := usecase.New(mockRepo)
+
+	account := &entity.AccountEntity{
+		ID:        uuid.New(),
+		Name:      "Gandalf",
+		Email:     "gandalf@lor.com",
+		Password:  "mago123",
+		Avatar:    "http://my_huge_staff.com/3121034",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		DeletedAt: func() *time.Time { t := time.Now(); return &t }(),
+	}
+
+	err := uc.Find(account)
+
+	mockRepo.FindFunc = func(acc *entity.AccountEntity) error {
+		assert.NotNil(t, acc.ID)
+		return nil
+	}
 
 	assert.NoError(t, err)
 }
