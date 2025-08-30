@@ -21,12 +21,20 @@ import (
 // Ele nos permite simular o comportamento do use case em nossos testes.
 type mockAccountUseCase struct {
 	RegisterFunc func(account *entity.AccountEntity) error
+	FindFunc     func(account *entity.AccountEntity) error
 }
 
 // Register é a implementação mockada do método da interface.
 func (m *mockAccountUseCase) Register(account *entity.AccountEntity) error {
 	if m.RegisterFunc != nil {
 		return m.RegisterFunc(account)
+	}
+	return nil
+}
+
+func (m *mockAccountUseCase) Find(account *entity.AccountEntity) error {
+	if m.FindFunc != nil {
+		return m.FindFunc(account)
 	}
 	return nil
 }
@@ -141,6 +149,7 @@ func TestAccountHandler_Register(t *testing.T) {
 		// Verificamos a mensagem de erro
 		var responseBody map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &responseBody)
-		assert.Equal(t, expectedError, responseBody["error"])
+		assert.Equal(t, "error", responseBody["status"])
+		assert.Equal(t, expectedError, responseBody["message"])
 	})
 }

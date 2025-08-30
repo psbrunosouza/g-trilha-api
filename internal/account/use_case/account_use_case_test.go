@@ -11,10 +11,15 @@ import (
 
 type mockAccountRepository struct {
 	RegisterFunc func(account *entity.AccountEntity) error
+	FindFunc     func(account *entity.AccountEntity) error
 }
 
 func (m *mockAccountRepository) Register(account *entity.AccountEntity) error {
 	return m.RegisterFunc(account)
+}
+
+func (m *mockAccountRepository) Find(account *entity.AccountEntity) error {
+	return m.FindFunc(account)
 }
 
 func TestAccountUseCase_Register(t *testing.T) {

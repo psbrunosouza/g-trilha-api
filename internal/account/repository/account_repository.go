@@ -14,6 +14,7 @@ type AccountRepository struct {
 
 type AccountRepositoryInterface interface {
 	Register(account *entity.AccountEntity) error
+	Find(account *entity.AccountEntity) error
 }
 
 func New(db db.Querier) *AccountRepository {
@@ -32,6 +33,27 @@ func (r *AccountRepository) Register(account *entity.AccountEntity) error {
 
 	if err != nil {
 		return fmt.Errorf("erro ao registrar conta: %w", err)
+	}
+
+	*account = entity.AccountEntity{
+		ID:        acc.ID,
+		Name:      acc.Name,
+		Email:     acc.Email,
+		Password:  acc.Password,
+		CreatedAt: acc.CreatedAt.Time,
+		UpdatedAt: acc.UpdatedAt.Time,
+		DeletedAt: &acc.DeletedAt.Time,
+		Avatar:    acc.Avatar.String,
+	}
+
+	return nil
+}
+
+func (r *AccountRepository) Find(account *entity.AccountEntity) error {
+	acc, err := r.db.FindAccount(context.Background(), account.ID)
+
+	if err != nil {
+		return fmt.Errorf("account does not exists: %w", err)
 	}
 
 	*account = entity.AccountEntity{

@@ -22,7 +22,10 @@ func (h *AccountHandler) Register(c *gin.Context) {
 	req := dto.CreateAccountRequest{}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, sharedDto.APIResponse[dto.AccountResponse]{
+			Status:  "error",
+			Message: err.Error(),
+		})
 		return
 	}
 
@@ -34,7 +37,10 @@ func (h *AccountHandler) Register(c *gin.Context) {
 	}
 
 	if err := h.usecase.Register(&model); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, sharedDto.APIResponse[dto.AccountResponse]{
+			Status:  "error",
+			Message: err.Error(),
+		})
 		return
 	}
 
