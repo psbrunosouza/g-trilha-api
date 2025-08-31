@@ -1,31 +1,24 @@
 package usecase_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 	"trilha-api/internal/account/entity"
+	"trilha-api/internal/account/mocks"
 	usecase "trilha-api/internal/account/use_case"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type mockAccountRepository struct {
-	RegisterFunc func(account *entity.AccountEntity) error
-	FindFunc     func(account *entity.AccountEntity) error
-}
-
-func (m *mockAccountRepository) Register(account *entity.AccountEntity) error {
-	return m.RegisterFunc(account)
-}
-
-func (m *mockAccountRepository) Find(account *entity.AccountEntity) error {
-	return m.FindFunc(account)
-}
-
 func TestAccountUseCase_Register(t *testing.T) {
-	mockRepo := &mockAccountRepository{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockAccountRepositoryInterface(ctrl)
 	uc := usecase.New(mockRepo)
 
 	account := &entity.AccountEntity{
@@ -35,12 +28,12 @@ func TestAccountUseCase_Register(t *testing.T) {
 		Avatar:   "test image",
 	}
 
-	mockRepo.RegisterFunc = func(acc *entity.AccountEntity) error {
+	mockRepo.EXPECT().Register(gomock.Any()).DoAndReturn(func(acc *entity.AccountEntity) error {
 		assert.NotEqual(t, "password123", acc.Password)
 		err := bcrypt.CompareHashAndPassword([]byte(acc.Password), []byte("password123"))
 		assert.NoError(t, err)
 		return nil
-	}
+	})
 
 	err := uc.Register(account)
 
@@ -48,26 +41,58 @@ func TestAccountUseCase_Register(t *testing.T) {
 }
 
 func TestAccountUseCase_Find(t *testing.T) {
-	mockRepo := &mockAccountRepository{}
-	uc := usecase.New(mockRepo)
+	t.Run("Should find an account by id with success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-	account := &entity.AccountEntity{
-		ID:        uuid.New(),
-		Name:      "Gandalf",
-		Email:     "gandalf@lor.com",
-		Password:  "mago123",
-		Avatar:    "http://my_huge_staff.com/3121034",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		DeletedAt: func() *time.Time { t := time.Now(); return &t }(),
-	}
+		mockRepo := mocks.NewMockAccountRepositoryInterface(ctrl)
+		uc := usecase.New(mockRepo)
 
-	err := uc.Find(account)
+		accountId := uuid.New()
+		now := time.Now()
 
-	mockRepo.FindFunc = func(acc *entity.AccountEntity) error {
-		assert.NotNil(t, acc.ID)
-		return nil
-	}
+		account := &entity.AccountEntity{
+			ID: accountId,
+		}
 
-	assert.NoError(t, err)
+		expectedAccount := &entity.AccountEntity{
+			ID:        accountId,
+			Name:      "Gandalf",
+			Email:     "gandalf@lor.com.br",
+			Password:  "123mago",
+			Avatar:    "url",
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+
+		mockRepo.EXPECT().Find(account).DoAndReturn(func(acc *entity.AccountEntity) error {
+			*acc = *expectedAccount
+			return nil
+		})
+
+		err := uc.Find(account)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expectedAccount, account)
+	})
+
+	t.Run("should return an error when account does not exist", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRepo := mocks.NewMockAccountRepositoryInterface(ctrl)
+		uc := usecase.New(mockRepo)
+
+		accountId := uuid.New()
+
+		account := &entity.AccountEntity{
+			ID: accountId,
+		}
+
+		mockRepo.EXPECT().Find(account).Return(errors.New("account was not found"))
+
+		err := uc.Find(account)
+
+		assert.Error(t, err)
+	})
 }

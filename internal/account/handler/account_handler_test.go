@@ -2,131 +2,95 @@ package handler_test
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 	"trilha-api/internal/account/dto"
 	"trilha-api/internal/account/entity"
 	"trilha-api/internal/account/handler"
-	usecase "trilha-api/internal/account/use_case"
+	"trilha-api/internal/account/mocks"
+	sharedDto "trilha-api/internal/shared/dto"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
-// mockAccountUseCase é o nosso mock para a interface AccountUseCaseInterface.
-// Ele nos permite simular o comportamento do use case em nossos testes.
-type mockAccountUseCase struct {
-	RegisterFunc func(account *entity.AccountEntity) error
-	FindFunc     func(account *entity.AccountEntity) error
-}
+func setup(t *testing.T) (*gin.Engine, *mocks.MockAccountUseCaseInterface, *gomock.Controller) {
+	gin.SetMode(gin.TestMode)
+	ctrl := gomock.NewController(t)
+	mockUseCase := mocks.NewMockAccountUseCaseInterface(ctrl)
+	h := handler.New(mockUseCase)
+	router := gin.Default()
 
-// Register é a implementação mockada do método da interface.
-func (m *mockAccountUseCase) Register(account *entity.AccountEntity) error {
-	if m.RegisterFunc != nil {
-		return m.RegisterFunc(account)
-	}
-	return nil
-}
+	router.POST("/api/v1/accounts/register", h.Register)
+	router.GET("/api/v1/accounts/find/:id", h.Find)
 
-func (m *mockAccountUseCase) Find(account *entity.AccountEntity) error {
-	if m.FindFunc != nil {
-		return m.FindFunc(account)
-	}
-	return nil
+	return router, mockUseCase, ctrl
 }
-
-// Garante que nosso mock implementa a interface em tempo de compilação.
-var _ usecase.AccountUseCaseInterface = (*mockAccountUseCase)(nil)
 
 func TestAccountHandler_Register(t *testing.T) {
-	// Configura o Gin para o modo de teste
-	gin.SetMode(gin.TestMode)
-
-	// Cenário 1: Registro com sucesso
 	t.Run("should return status 201 and the created account on success", func(t *testing.T) {
-		// Arrange (Preparação)
-		mockUseCase := &mockAccountUseCase{}
+		router, mockUseCase, ctrl := setup(t)
+		defer ctrl.Finish()
+
 		accountID := uuid.New()
-
-		// Configuramos o mock para retornar sucesso
-		mockUseCase.RegisterFunc = func(account *entity.AccountEntity) error {
-			// Simulamos que o use case preenche o ID do modelo
-			account.ID = accountID
-			return nil
-		}
-
-		h := handler.New(mockUseCase)
-		router := gin.Default()
-		router.POST("/register", h.Register)
-
-		// Criamos o corpo da requisição
 		createAccountReq := dto.CreateAccountRequest{
 			Name:     "Test User",
 			Email:    "test@example.com",
 			Password: "password123",
 			Avatar:   "test",
 		}
-		body, _ := json.Marshal(createAccountReq)
 
-		// Criamos a requisição HTTP
+		mockUseCase.EXPECT().Register(gomock.Any()).DoAndReturn(func(account *entity.AccountEntity) error {
+			account.ID = accountID
+			return nil
+		})
+
+		body, _ := json.Marshal(createAccountReq)
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(body))
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/accounts/register", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
-		// Act (Ação)
 		router.ServeHTTP(w, req)
 
-		// Assert (Verificação)
 		assert.Equal(t, http.StatusCreated, w.Code)
 
-		// Verificamos também o corpo da resposta
-		var responseBody map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &responseBody)
-		assert.Equal(t, "success", responseBody["status"])
+		var responseBody sharedDto.APIResponse[dto.AccountResponse]
+		err := json.Unmarshal(w.Body.Bytes(), &responseBody)
+		assert.NoError(t, err)
 
-		data := responseBody["data"].(map[string]interface{})
-		assert.Equal(t, accountID.String(), data["id"])
-		assert.Equal(t, createAccountReq.Name, data["name"])
-		assert.Equal(t, createAccountReq.Email, data["email"])
+		assert.Equal(t, http.StatusCreated, responseBody.Status)
+		assert.Equal(t, accountID, responseBody.Data.ID)
+		assert.Equal(t, createAccountReq.Name, responseBody.Data.Name)
+		assert.Equal(t, createAccountReq.Email, responseBody.Data.Email)
 	})
 
-	// Cenário 2: Erro de validação (JSON inválido)
 	t.Run("should return status 400 for invalid json body", func(t *testing.T) {
-		// Arrange
-		mockUseCase := &mockAccountUseCase{} // O mock não será chamado
-		h := handler.New(mockUseCase)
-		router := gin.Default()
-		router.POST("/register", h.Register)
+		router, _, ctrl := setup(t)
+		defer ctrl.Finish()
 
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer([]byte("invalid-json")))
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/accounts/register", bytes.NewBuffer([]byte("invalid-json")))
 		req.Header.Set("Content-Type", "application/json")
 
-		// Act
 		router.ServeHTTP(w, req)
 
-		// Assert
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
-	// Cenário 3: Erro retornado pelo use case
 	t.Run("should return status 500 when use case returns an error", func(t *testing.T) {
-		// Arrange
-		mockUseCase := &mockAccountUseCase{}
+		router, mockUseCase, ctrl := setup(t)
+		defer ctrl.Finish()
+
 		expectedError := "database connection failed"
-
-		// Configuramos o mock para retornar um erro
-		mockUseCase.RegisterFunc = func(account *entity.AccountEntity) error {
-			return errors.New(expectedError)
-		}
-
-		h := handler.New(mockUseCase)
-		router := gin.Default()
-		router.POST("/register", h.Register)
+		mockUseCase.EXPECT().Register(gomock.Any()).Return(errors.New(expectedError))
 
 		createAccountReq := dto.CreateAccountRequest{
 			Name:     "Test User",
@@ -135,21 +99,98 @@ func TestAccountHandler_Register(t *testing.T) {
 			Avatar:   "test",
 		}
 		body, _ := json.Marshal(createAccountReq)
-
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(body))
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/accounts/register", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
-		// Act
 		router.ServeHTTP(w, req)
 
-		// Assert
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 
-		// Verificamos a mensagem de erro
-		var responseBody map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &responseBody)
-		assert.Equal(t, "error", responseBody["status"])
-		assert.Equal(t, expectedError, responseBody["message"])
+		var responseBody sharedDto.APIResponse[any]
+		err := json.Unmarshal(w.Body.Bytes(), &responseBody)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, responseBody.Status)
+		assert.Equal(t, expectedError, responseBody.Message)
+	})
+}
+
+func TestAccountHandler_Find(t *testing.T) {
+	t.Run("should return status 200 and account by id", func(t *testing.T) {
+		router, mockUseCase, ctrl := setup(t)
+		defer ctrl.Finish()
+
+		accountID := uuid.New()
+		now := time.Now()
+		expectedAccount := &entity.AccountEntity{
+			ID:        accountID,
+			Name:      "Gandalf",
+			Email:     "gandalf@lor.com.br",
+			Password:  "123mago",
+			Avatar:    "url",
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+
+		mockUseCase.EXPECT().Find(gomock.Any()).DoAndReturn(func(acc *entity.AccountEntity) error {
+			*acc = *expectedAccount
+			return nil
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/accounts/find/%s", accountID.String()), nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var responseBody sharedDto.APIResponse[dto.AccountResponse]
+		err := json.Unmarshal(w.Body.Bytes(), &responseBody)
+		assert.NoError(t, err)
+
+		assert.Equal(t, http.StatusOK, responseBody.Status)
+		data := responseBody.Data
+		assert.Equal(t, accountID, data.ID)
+		assert.Equal(t, expectedAccount.Name, data.Name)
+		assert.Equal(t, expectedAccount.Email, data.Email)
+		assert.Equal(t, expectedAccount.Avatar, data.Avatar)
+		assert.WithinDuration(t, expectedAccount.CreatedAt, data.CreatedAt, time.Second)
+		assert.WithinDuration(t, expectedAccount.UpdatedAt, data.UpdatedAt, time.Second)
+	})
+
+	t.Run("should return status 400 for invalid account id", func(t *testing.T) {
+		router, _, ctrl := setup(t)
+		defer ctrl.Finish()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/accounts/find/invalid-uuid", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var responseBody sharedDto.APIResponse[any]
+		err := json.Unmarshal(w.Body.Bytes(), &responseBody)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, responseBody.Status)
+		assert.Equal(t, "Invalid account ID", responseBody.Message)
+	})
+
+	t.Run("should return status 404 when account is not found", func(t *testing.T) {
+		router, mockUseCase, ctrl := setup(t)
+		defer ctrl.Finish()
+
+		accountID := uuid.New()
+		mockUseCase.EXPECT().Find(gomock.Any()).Return(sql.ErrNoRows)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/accounts/find/%s", accountID.String()), nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+
+		var responseBody sharedDto.APIResponse[any]
+		err := json.Unmarshal(w.Body.Bytes(), &responseBody)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, responseBody.Status)
+		assert.Equal(t, "Account not found", responseBody.Message)
 	})
 }
