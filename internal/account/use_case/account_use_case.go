@@ -11,6 +11,7 @@ import (
 type AccountUseCaseInterface interface {
 	Register(account *entity.AccountEntity) error
 	Find(account *entity.AccountEntity) error
+	FindByEmail(account *entity.AccountEntity) error
 }
 
 type AccountUseCase struct {
@@ -35,4 +36,8 @@ func (uc *AccountUseCase) Register(account *entity.AccountEntity) error {
 
 func (uc *AccountUseCase) Find(account *entity.AccountEntity) error {
 	return uc.repo.Find(account)
+}
+
+func (uc *AccountUseCase) FindByEmail(account *entity.AccountEntity) error {
+	return uc.repo.FindByEmail(account)
 }

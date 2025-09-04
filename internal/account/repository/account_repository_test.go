@@ -15,12 +15,18 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestAccountRepository_Register(t *testing.T) {
+func setup(t *testing.T) (*mocks.MockQuerier, *AccountRepository) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	dbMock := mocks.NewMockQuerier(ctrl)
 	repo := New(dbMock)
+
+	return dbMock, repo
+}
+
+func TestAccountRepository_Register(t *testing.T) {
+	dbMock, repo := setup(t)
 
 	t.Run("should register a new account with success", func(t *testing.T) {
 		account := &entity.AccountEntity{
@@ -76,11 +82,7 @@ func TestAccountRepository_Register(t *testing.T) {
 }
 
 func TestAccountRepository_Find(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	dbMock := mocks.NewMockQuerier(ctrl)
-	repo := New(dbMock)
+	dbMock, repo := setup(t)
 
 	t.Run("should return an account by id", func(t *testing.T) {
 		account := &entity.AccountEntity{
@@ -128,6 +130,53 @@ func TestAccountRepository_Find(t *testing.T) {
 		dbMock.EXPECT().FindAccount(context.Background(), account.ID).Return(db.FindAccountRow{}, errors.New("database error"))
 
 		err := repo.Find(account)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestAccountRepository_FindByEmail(t *testing.T) {
+	dbMock, repo := setup(t)
+
+	t.Run("should find an account by email and return account", func(t *testing.T) {
+		now := time.Now()
+
+		account := &entity.AccountEntity{
+			Email: "gandalf@lor.com.br",
+		}
+
+		expectedAccount := db.FindAccountByEmailRow{
+			Email:     account.Email,
+			ID:        uuid.New(),
+			Name:      "gandalf",
+			Password:  "gandalf123",
+			Avatar:    utils.ToPgText("url"),
+			CreatedAt: utils.TimeToPgTimestamp(&now),
+			UpdatedAt: utils.TimeToPgTimestamp(&now),
+		}
+
+		dbMock.EXPECT().FindAccountByEmail(context.Background(), account.Email).Return(expectedAccount, nil)
+
+		err := repo.FindByEmail(account)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expectedAccount.Email, account.Email)
+		assert.Equal(t, expectedAccount.Avatar.String, account.Avatar)
+		assert.Equal(t, expectedAccount.ID, account.ID)
+		assert.Equal(t, expectedAccount.Name, account.Name)
+		assert.Equal(t, expectedAccount.Password, account.Password)
+		assert.Equal(t, expectedAccount.CreatedAt.Time, account.CreatedAt)
+		assert.Equal(t, expectedAccount.UpdatedAt.Time, account.UpdatedAt)
+	})
+
+	t.Run("should return an error when account not found", func(t *testing.T) {
+		account := &entity.AccountEntity{
+			Email: "gandalf@lor.com.br",
+		}
+
+		dbMock.EXPECT().FindAccountByEmail(context.Background(), account.Email).Return(db.FindAccountByEmailRow{}, errors.New("database error"))
+
+		err := repo.FindByEmail(account)
 
 		assert.Error(t, err)
 	})

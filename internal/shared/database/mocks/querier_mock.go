@@ -71,3 +71,18 @@ func (mr *MockQuerierMockRecorder) FindAccount(ctx, arg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAccount", reflect.TypeOf((*MockQuerier)(nil).FindAccount), ctx, arg)
 }
+
+// FindAccountByEmail mocks base method.
+func (m *MockQuerier) FindAccountByEmail(ctx context.Context, arg string) (db.FindAccountByEmailRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAccountByEmail", ctx, arg)
+	ret0, _ := ret[0].(db.FindAccountByEmailRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindAccountByEmail indicates an expected call of FindAccountByEmail.
+func (mr *MockQuerierMockRecorder) FindAccountByEmail(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAccountByEmail", reflect.TypeOf((*MockQuerier)(nil).FindAccountByEmail), ctx, arg)
+}

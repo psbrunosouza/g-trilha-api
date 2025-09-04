@@ -79,6 +79,39 @@ func (q *Queries) FindAccount(ctx context.Context, id uuid.UUID) (FindAccountRow
 	return i, err
 }
 
+const findAccountByEmail = `-- name: FindAccountByEmail :one
+SELECT id, name, email, avatar, created_at, updated_at, deleted_at, password
+FROM accounts
+WHERE email = $1
+`
+
+type FindAccountByEmailRow struct {
+	ID        uuid.UUID
+	Name      string
+	Email     string
+	Avatar    pgtype.Text
+	CreatedAt pgtype.Timestamp
+	UpdatedAt pgtype.Timestamp
+	DeletedAt pgtype.Timestamp
+	Password  string
+}
+
+func (q *Queries) FindAccountByEmail(ctx context.Context, email string) (FindAccountByEmailRow, error) {
+	row := q.db.QueryRow(ctx, findAccountByEmail, email)
+	var i FindAccountByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Avatar,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Password,
+	)
+	return i, err
+}
+
 const updateAccount = `-- name: UpdateAccount :one
 UPDATE accounts
 SET name = $2, avatar = $3

@@ -54,6 +54,20 @@ func (mr *MockAccountUseCaseInterfaceMockRecorder) Find(account any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Find", reflect.TypeOf((*MockAccountUseCaseInterface)(nil).Find), account)
 }
 
+// FindByEmail mocks base method.
+func (m *MockAccountUseCaseInterface) FindByEmail(account *entity.AccountEntity) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByEmail", account)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FindByEmail indicates an expected call of FindByEmail.
+func (mr *MockAccountUseCaseInterfaceMockRecorder) FindByEmail(account any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByEmail", reflect.TypeOf((*MockAccountUseCaseInterface)(nil).FindByEmail), account)
+}
+
 // Register mocks base method.
 func (m *MockAccountUseCaseInterface) Register(account *entity.AccountEntity) error {
 	m.ctrl.T.Helper()

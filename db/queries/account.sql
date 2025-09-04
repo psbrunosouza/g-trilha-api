@@ -13,3 +13,8 @@ RETURNING id, name, email, password, avatar, created_at, updated_at, deleted_at;
 SELECT id, name, email, avatar, created_at, updated_at, deleted_at, password
 FROM accounts
 WHERE id = $1;
+
+-- name: FindAccountByEmail :one
+SELECT id, name, email, avatar, created_at, updated_at, deleted_at, password
+FROM accounts
+WHERE email = $1;

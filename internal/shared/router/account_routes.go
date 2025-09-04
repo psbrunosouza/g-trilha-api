@@ -14,4 +14,5 @@ func AccountRoutes(apiGroup *gin.RouterGroup) {
 
 	accountGroup.POST("/", accountHandler.Register)
 	accountGroup.GET("/:id", accountHandler.Find)
+	accountGroup.GET("/find_by_email/:email", accountHandler.FindByEmail)
 }

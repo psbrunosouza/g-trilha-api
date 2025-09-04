@@ -18,6 +18,7 @@ type AccountRepository struct {
 type AccountRepositoryInterface interface {
 	Register(account *entity.AccountEntity) error
 	Find(account *entity.AccountEntity) error
+	FindByEmail(account *entity.AccountEntity) error
 }
 
 func New(db db.Querier) *AccountRepository {
@@ -61,7 +62,7 @@ func (r *AccountRepository) Find(account *entity.AccountEntity) error {
 	acc, err := r.db.FindAccount(context.Background(), account.ID)
 
 	if err != nil {
-		return fmt.Errorf("account does not exists: %w", err)
+		return err
 	}
 
 	var deletedAt *time.Time
@@ -78,6 +79,32 @@ func (r *AccountRepository) Find(account *entity.AccountEntity) error {
 		UpdatedAt: acc.UpdatedAt.Time,
 		DeletedAt: deletedAt,
 		Avatar:    acc.Avatar.String,
+	}
+
+	return nil
+}
+
+func (r *AccountRepository) FindByEmail(account *entity.AccountEntity) error {
+	acc, err := r.db.FindAccountByEmail(context.Background(), account.Email)
+
+	if err != nil {
+		return err
+	}
+
+	var deletedAt *time.Time
+	if acc.DeletedAt.Valid {
+		deletedAt = &acc.DeletedAt.Time
+	}
+
+	*account = entity.AccountEntity{
+		ID:        acc.ID,
+		Name:      acc.Name,
+		Email:     acc.Email,
+		Password:  acc.Password,
+		Avatar:    acc.Avatar.String,
+		CreatedAt: acc.CreatedAt.Time,
+		UpdatedAt: acc.UpdatedAt.Time,
+		DeletedAt: deletedAt,
 	}
 
 	return nil
