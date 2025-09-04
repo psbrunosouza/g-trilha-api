@@ -39,6 +39,24 @@ func (h *AccountHandler) Register(c *gin.Context) {
 		Avatar:   req.Avatar,
 	}
 
+	// Check if user already exists
+	err := h.usecase.FindByEmail(&entity.AccountEntity{Email: model.Email})
+	if err == nil {
+		c.JSON(http.StatusConflict, sharedDto.APIResponse[any]{
+			Status:  http.StatusConflict,
+			Message: "account with this email already exists",
+		})
+		return
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusInternalServerError, sharedDto.APIResponse[any]{
+			Status:  http.StatusInternalServerError,
+			Message: "error checking for existing account",
+		})
+		return
+	}
+
+	// Register new user
 	if err := h.usecase.Register(&model); err != nil {
 		c.JSON(http.StatusInternalServerError, sharedDto.APIResponse[any]{
 			Status:  http.StatusInternalServerError,

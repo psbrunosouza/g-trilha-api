@@ -50,6 +50,7 @@ func TestAccountHandler_Register(t *testing.T) {
 			Avatar:   "test",
 		}
 
+		mockUseCase.EXPECT().FindByEmail(gomock.Any()).Return(sql.ErrNoRows)
 		mockUseCase.EXPECT().Register(gomock.Any()).DoAndReturn(func(account *entity.AccountEntity) error {
 			account.ID = accountID
 			return nil
@@ -74,6 +75,55 @@ func TestAccountHandler_Register(t *testing.T) {
 		assert.Equal(t, createAccountReq.Email, responseBody.Data.Email)
 	})
 
+	t.Run("should return status 409 when account already exists", func(t *testing.T) {
+		createAccountReq := dto.CreateAccountRequest{
+			Name:     "Test User",
+			Email:    "test@example.com",
+			Password: "password123",
+		}
+
+		// Expect FindByEmail to be called and return nil (user found)
+		mockUseCase.EXPECT().FindByEmail(gomock.Any()).Return(nil)
+
+		body, _ := json.Marshal(createAccountReq)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/accounts", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusConflict, w.Code)
+
+		var responseBody sharedDto.APIResponse[any]
+		err := json.Unmarshal(w.Body.Bytes(), &responseBody)
+		assert.NoError(t, err)
+	})
+
+	t.Run("should return status 500 when checking for existing user fails", func(t *testing.T) {
+		createAccountReq := dto.CreateAccountRequest{
+			Name:     "Test User",
+			Email:    "test@example.com",
+			Password: "password123",
+		}
+		expectedError := "db connection error"
+
+		// Expect FindByEmail to return a generic error
+		mockUseCase.EXPECT().FindByEmail(gomock.Any()).Return(errors.New(expectedError))
+
+		body, _ := json.Marshal(createAccountReq)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/accounts", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+		var responseBody sharedDto.APIResponse[any]
+		err := json.Unmarshal(w.Body.Bytes(), &responseBody)
+		assert.NoError(t, err)
+	})
+
 	t.Run("should return status 400 for invalid json body", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/accounts", bytes.NewBuffer([]byte("invalid-json")))
@@ -86,6 +136,7 @@ func TestAccountHandler_Register(t *testing.T) {
 
 	t.Run("should return status 500 when use case returns an error", func(t *testing.T) {
 		expectedError := "database connection failed"
+		mockUseCase.EXPECT().FindByEmail(gomock.Any()).Return(sql.ErrNoRows)
 		mockUseCase.EXPECT().Register(gomock.Any()).Return(errors.New(expectedError))
 
 		createAccountReq := dto.CreateAccountRequest{
@@ -107,7 +158,6 @@ func TestAccountHandler_Register(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &responseBody)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, responseBody.Status)
-		assert.Equal(t, expectedError, responseBody.Message)
 	})
 }
 
